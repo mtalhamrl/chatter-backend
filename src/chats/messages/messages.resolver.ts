@@ -1,5 +1,5 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Inject, UseGuards } from '@nestjs/common';
+import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import { GqlAuthGuard } from '../../auth/guards/gql-auth.guard';
 import { TokenPayload } from '../../auth/token-payload.interface';
@@ -7,10 +7,17 @@ import { CreateMessageInput } from './dto/create-message.input';
 import { GetMessagesArgs } from './dto/get-messages-args';
 import { Message } from './entities/message.entity';
 import { MessagesService } from './messages.service';
+import { PUB_SUB } from 'src/common/constants/injection-tokens';
+import { PubSub } from 'graphql-subscriptions';
+import { MESSAGE_CREATED } from './constants/pubsub-triggers';
+import { MessageCreatedArgs } from './dto/message-created.args';
 
 @Resolver(() => Message)
 export class MessagesResolver {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    @Inject(PUB_SUB) private readonly pubSub: PubSub,
+  ) {}
 
   @Mutation(() => Message)
   @UseGuards(GqlAuthGuard)
@@ -28,5 +35,14 @@ export class MessagesResolver {
     @CurrentUser() user: TokenPayload,
   ) {
     return this.messagesService.getMessages(getMessagesArgs, user._id);
+  }
+
+  @Subscription(() => Message, {
+    filter: (payload, variables) => {
+      return payload.messageCreated.chatId === variables.chatId;
+    },
+  })
+  messageCreated(@Args() _messageCreatedArgs: MessageCreatedArgs) {
+    return this.pubSub.asyncIterator(MESSAGE_CREATED);
   }
 }

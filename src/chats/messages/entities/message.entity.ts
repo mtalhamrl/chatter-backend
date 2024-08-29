@@ -11,11 +11,15 @@ export class Message extends AbstractEntity {
 
   @Field()
   @Prop()
-  createAt: Date;
+  createdAt: Date;
 
   @Field()
   @Prop()
   userId: string;
+
+  @Field()
+  @Prop()
+  chatId: string;
 }
 
 export const ChatSchema = SchemaFactory.createForClass(Message);
