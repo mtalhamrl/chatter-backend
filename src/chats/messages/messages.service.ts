@@ -3,14 +3,18 @@ import { ChatsRepository } from '../chats.repository';
 import { CreateMessageInput } from './dto/create-message.input';
 import { Message } from './entities/message.entity';
 import { Types } from 'mongoose';
-import { GetMessagesArgs } from './dto/get-messages-args';
-import { PUB_SUB } from 'src/common/constants/injection-tokens';
+import { PUB_SUB } from '../../common/constants/injection-tokens';
 import { PubSub } from 'graphql-subscriptions';
+import { MESSAGE_CREATED } from './constants/pubsub-triggers';
+import { MessageCreatedArgs } from './dto/message-created.args';
+import { ChatsService } from '../chats.service';
+import { GetMessagesArgs } from './dto/get-messages-args';
 
 @Injectable()
 export class MessagesService {
   constructor(
     private readonly chatsRepository: ChatsRepository,
+    private readonly chatsService: ChatsService,
     @Inject(PUB_SUB) private readonly pubSub: PubSub,
   ) {}
 
@@ -25,7 +29,7 @@ export class MessagesService {
     await this.chatsRepository.findOneAndUpdate(
       {
         _id: chatId,
-        ...this.userChatFilter(userId),
+        ...this.chatsService.userChatFilter(userId),
       },
       {
         $push: {
@@ -33,29 +37,26 @@ export class MessagesService {
         },
       },
     );
-    await this.pubSub.publish('MESSAGE_CREATED', { messageCreated: message });
+    await this.pubSub.publish(MESSAGE_CREATED, {
+      messageCreated: message,
+    });
     return message;
-  }
-
-  private userChatFilter(userId: string) {
-    return {
-      $or: [
-        { userId },
-        {
-          userIds: {
-            $in: [userId],
-          },
-        },
-      ],
-    };
   }
 
   async getMessages({ chatId }: GetMessagesArgs, userId: string) {
     return (
       await this.chatsRepository.findOne({
         _id: chatId,
-        ...this.userChatFilter(userId),
+        ...this.chatsService.userChatFilter(userId),
       })
     ).messages;
+  }
+
+  async messageCreated({ chatId }: MessageCreatedArgs, userId: string) {
+    await this.chatsRepository.findOne({
+      _id: chatId,
+      ...this.chatsService.userChatFilter(userId),
+    });
+    return this.pubSub.asyncIterator(MESSAGE_CREATED);
   }
 }
