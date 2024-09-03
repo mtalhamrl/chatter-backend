@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ModelDefinition, MongooseModule } from '@nestjs/mongoose';
 import { DbMigrationService } from './db-migration.service';
+
 @Module({
   imports: [
     MongooseModule.forRootAsync({
@@ -14,7 +15,7 @@ import { DbMigrationService } from './db-migration.service';
   providers: [DbMigrationService],
 })
 export class DatabaseModule {
-  static forFeature(model: ModelDefinition[]) {
-    return MongooseModule.forFeature(model);
+  static forFeature(models: ModelDefinition[]) {
+    return MongooseModule.forFeature(models);
   }
 }
