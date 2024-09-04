@@ -5,10 +5,10 @@ import { Message } from './entities/message.entity';
 import { Types } from 'mongoose';
 import { PUB_SUB } from '../../common/constants/injection-tokens';
 import { PubSub } from 'graphql-subscriptions';
+import { MESSAGE_CREATED } from './constants/pubsub-triggers';
 import { MessageDocument } from './entities/message.document';
 import { UsersService } from '../../users/users.service';
 import { GetMessagesArgs } from './dto/get-messages-args';
-import { MESSAGE_CREATED } from './constants/pubsub-triggers';
 
 @Injectable()
 export class MessagesService {
@@ -55,8 +55,9 @@ export class MessagesService {
       ])
     )[0];
   }
+
   async getMessages({ chatId, skip, limit }: GetMessagesArgs) {
-    return this.chatsRepository.model.aggregate([
+    const messages = await this.chatsRepository.model.aggregate([
       { $match: { _id: new Types.ObjectId(chatId) } },
       { $unwind: '$messages' },
       { $replaceRoot: { newRoot: '$messages' } },
@@ -75,6 +76,10 @@ export class MessagesService {
       { $unset: 'userId' },
       { $set: { chatId } },
     ]);
+    for (const message of messages) {
+      message.user = this.usersService.toEntity(message.user);
+    }
+    return messages;
   }
 
   async messageCreated() {
