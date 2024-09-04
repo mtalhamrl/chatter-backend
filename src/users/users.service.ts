@@ -7,8 +7,8 @@ import * as bcrypt from 'bcrypt';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UsersRepository } from './users.repository';
-import { S3Service } from 'src/common/s3/s3.service';
-import { USER_BUCKET, USERS_IMAGE_FILE_EXTENSION } from './users.constants';
+import { S3Service } from '../common/s3/s3.service';
+import { USERS_BUCKET, USERS_IMAGE_FILE_EXTENSION } from './users.constants';
 
 @Injectable()
 export class UsersService {
@@ -33,7 +33,7 @@ export class UsersService {
 
   async uploadImage(file: Buffer, userId: string) {
     await this.s3Service.upload({
-      bucket: USER_BUCKET,
+      bucket: USERS_BUCKET,
       key: `${userId}.${USERS_IMAGE_FILE_EXTENSION}`,
       file,
     });
